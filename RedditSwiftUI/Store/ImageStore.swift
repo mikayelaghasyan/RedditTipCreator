@@ -10,7 +10,7 @@ import UIKit
 import Combine
 
 class ImageStore: ObservableObject {
-    var cancellable: AnyCancellable?
+    var cancellables: Set<AnyCancellable> = []
 
     @Published var imageMap: [URL: UIImage] = [:]
     
@@ -21,6 +21,7 @@ class ImageStore: ObservableObject {
     func loadImage(imageUrl: URL, scale: CGFloat) {
         guard !self.imageMap.keys.contains(imageUrl) else { return }
         let publisher = URLSession.shared.dataTaskPublisher(for: imageUrl)
+        var cancellable: AnyCancellable!
         cancellable = publisher
             .map {
                 UIImage(data: $0.data, scale: scale)
@@ -29,7 +30,8 @@ class ImageStore: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] image in
                 self?.imageMap[imageUrl] = image
-                self?.cancellable = nil
+                self?.cancellables.remove(cancellable)
             }
+        cancellable.store(in: &cancellables)
     }
 }
