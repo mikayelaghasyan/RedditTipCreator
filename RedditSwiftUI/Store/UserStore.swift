@@ -12,6 +12,8 @@ import Combine
 class UserStore: ObservableObject {
     var apiClient: RedditApiClient
 
+    var cancellable: AnyCancellable?
+
     @Published var userMap: [String: User] = [:]
 
     init(apiClient: RedditApiClient) {
@@ -21,12 +23,13 @@ class UserStore: ObservableObject {
     func loadUser(username: String) {
         guard !self.userMap.keys.contains(username) else { return }
         let publisher = self.apiClient.loadDataPublisher(path: "/user/\(username)/about", dataType: User.self)
-        _ = publisher
+        cancellable = publisher
             .replaceError(with: nil)
             .sink { [weak self] result in
                 if let user = result {
                     self?.userMap[username] = user
                 }
+                self?.cancellable = nil
             }
     }
 
